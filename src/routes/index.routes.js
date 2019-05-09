@@ -32,7 +32,7 @@ router.post('/login', async(req, res) => {
         }));
 });
 
-router.post('/newuser', async(req, res) => {
+router.post('/new-user', async(req, res) => {
     const user = new User();
     user.nickname = req.body.nickname;
     user.email = req.body.email;
@@ -48,14 +48,17 @@ router.post('/newuser', async(req, res) => {
 
 //chats
 
-router.get('/chats', (req, res) => {
-    Chat.find({})
+//recibe 
+router.get('/get-chat', (req, res) => {
+
+    Chat.find({ _id: req.body.id }, { mensajes: 1, usuarios: 0 })
+        .populate('usuarios')
         .then((chats) => res.send(chats))
         .catch((err) => res.send(err))
 
 });
 
-router.post('/newchat', (req, res) => {
+router.post('/new-chat', (req, res) => {
 
     const chat = new Chat();
     var transmitor;
@@ -77,10 +80,23 @@ router.post('/newchat', (req, res) => {
         })
         .then(() => res.send(chat))
         .catch((err) => res.send(err));
-
-
 });
 
+
+//messajes
+router.post('/new-message', (req, res) => {
+
+    Chat.updateOne({ _id: req.body.id }, {
+            $push: {
+                mensajes: {
+                    content: req.body.content,
+                    author: req.body.author
+                }
+            }
+        })
+        .then(res.send("message create"))
+        .catch((err) => res.send(err))
+});
 
 
 //images
