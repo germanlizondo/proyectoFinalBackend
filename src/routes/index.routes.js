@@ -15,9 +15,13 @@ router.get('/', (req, res) => {
 });
 
 //users
-router.get('/users', async(req, res) => {
-    const users = await User.find();
-    res.send(users);
+router.get('/all-users', async(req, res) => {
+    
+    var regexp = new RegExp("^"+ req.body.nickname);
+    
+    User.find({},{password:0})
+    .then((users)=>res.send(users));
+    
 });
 
 router.post('/login', async(req, res) => {
@@ -38,8 +42,6 @@ router.post('/new-user', async(req, res) => {
     user.email = req.body.email;
     user.password = req.body.password;
     console.log(user);
-
-
     user.save().then(() => {
             res.send(user);
         })
@@ -69,7 +71,6 @@ router.post('/new-chat', (req, res) => {
         .then((user) => {
 
             transmitor = mongoose.Types.ObjectId(user._id);
-            console.log("gr" + transmitor);
             return User.findOne({ nickname: req.body.receptor })
         })
         .then((user) => {
