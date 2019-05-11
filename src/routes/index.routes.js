@@ -17,10 +17,18 @@ router.get('/', (req, res) => {
 //users
 router.get('/all-users', async(req, res) => {
     
-    var regexp = new RegExp("^"+ req.body.nickname);
-    
     User.find({},{password:0})
-    .then((users)=>res.send(users));
+    .then((users)=>res.send({users: users}))
+    .catch((err)=>res.send(err));
+    
+});
+
+router.get('/all-users/:nickname', async(req, res) => {
+    
+    var regexp = new RegExp("^"+ req.params.nickname);
+    User.find({nickname: regexp},{password:0})
+    .then((users)=>res.send({users: users}))
+    .catch((err)=>res.send(err));
     
 });
 
