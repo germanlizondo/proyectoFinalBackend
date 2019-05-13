@@ -6,7 +6,6 @@ const morgan = require('morgan');
 const port = process.env.PORT || 3000;
 
 
-
 //init
 const app = express();
 const conectionMongoDB = require('./database');
@@ -49,4 +48,22 @@ app.use(require('./routes/index.routes'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 //listening
-app.listen(port, () => console.log(`listening on port ${port}`));
+const server = app.listen(port, () => console.log(`listening on port ${port}`));
+
+
+//socketIO settings
+const socketIO = require('socket.io');
+const io = socketIO.listen(server);
+
+//sockets
+io.on('connection', function(socket) {
+    console.log('Un cliente se ha conectado');
+    socket.on('disconnect', function(){
+        console.log('user disconnected');
+      });
+
+      socket.on('newmensaje', function(msg){
+        console.log('message: ' + msg);
+      });
+
+});

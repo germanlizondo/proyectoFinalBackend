@@ -47,6 +47,7 @@ router.post('/login', async(req, res) => {
     console.log(req.body);
     User.findOne({ nickname: req.body.nickname, password: req.body.password })
         .then((user) => {
+            console.log(user)
             if (!user) res.send({ err: 'Email o contraseña invalidos' });
             else res.send(user);
         })
@@ -123,7 +124,7 @@ router.get('/get-chat/:id', (req, res) => {
     var id = mongoose.Types.ObjectId(req.params.id);
     Chat.find({ usuarios: id }, { mensajes: 0 })
         .populate('usuarios')
-        .then((chats) => res.send(chats))
+        .then((chats) => res.send({chats}))
         .catch((err) => res.send(err))
 });
 
@@ -142,6 +143,15 @@ router.post('/new-chat', async(req, res) => {
 
 
 //messajes
+router.get('/get-message/:id', (req, res) => {
+const id = req.params.id;
+   
+    Chat.findOne({_id:id})
+    .populate('mensajes.author')
+    .then((chats) => res.send({chats}))
+    .catch((err) => res.send(err))
+});
+
 router.post('/new-message', (req, res) => {
 
     Chat.updateOne({ _id: req.body.id }, {
