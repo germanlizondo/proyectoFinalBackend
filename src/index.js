@@ -3,10 +3,14 @@ const path = require('path');
 const multer = require('multer');
 const uuid = require('uuid/v4');
 const morgan = require('morgan');
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
+const bodyParser = require('body-parser'); 
+        
 
+const Chat = require('./models/Chat');
 
 //init
+
 const app = express();
 const conectionMongoDB = require('./database');
 const storage = multer.diskStorage({
@@ -21,6 +25,8 @@ const storage = multer.diskStorage({
 
 
 //middleware
+app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.urlencoded({limit: '50mb', extended: true, parameterLimit: 1000000}));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: false }));
 app.use(multer({
@@ -38,7 +44,14 @@ app.use(multer({
     }
 }).single('profileimage'));
 
-
+// Configurar cabeceras y cors
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Request-Method');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+    res.header('Allow', 'GET, POST, OPTIONS, PUT, DELETE');
+    next();
+});
 
 
 //routes
@@ -58,12 +71,58 @@ const io = socketIO.listen(server);
 //sockets
 io.on('connection', function(socket) {
     console.log('Un cliente se ha conectado');
-    socket.on('disconnect', function(){
-        console.log('user disconnected');
+   
+      socket.on('join-room', (room)=>{
+          socket.join(room);
       });
+      socket.on('join-geolocation', (room)=>{
+          console.log(room)
+        socket.join(room);
+    });
+    socket.on('leave-geolocation', (room)=>{
+        console.log(room)
+        socket.leave(room);
+    });
+      socket.on('leave-room', (room)=>{
+        socket.leave(room);
+    });
 
-      socket.on('newmensaje', function(msg){
-        console.log('message: ' + msg);
-      });
+      socket.on('new-mensaje', (data)=>{
+        const data_string = JSON.stringify(data).replace(/_/g,"");
+        
+        let dataJson = JSON.parse(data_string);
+        let message = dataJson.message;
+        let date = new Date(message.date);
+        message.date = date.toISOString();
+          const room = dataJson.room;
+                      
+          Chat.updateOne({ _id: room }, {
+            $push: {
+                mensajes: {
+                    content: message.content,
+                    author: message.author.id
+                }
+            }
+        })
+        .then( socket.to(room).emit("new-message",message))
+        .catch((err)=>{
+            console.log(err);
+            socket.to(room).emit("new-message","Error al enviar Mensaje")
+        })
+       
+    });
+
+    socket.on('geolocation',(data)=>{
+
+        console.log(data);
+        const room = data.room;
+
+        socket.to(room).emit('geolocation-send',{
+            "latitude": data.latitude,
+            "longitud": data.longitud
+        })
+    })
+
+    
 
 });

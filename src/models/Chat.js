@@ -1,6 +1,8 @@
 const { Schema, model } = require('mongoose');
 
 const chatSchema = new Schema({
+    publicKey : {type:String},
+    privateKey: {type:String},
     mensajes: [{
         content: { type: String },
         date: { type: Date, default: Date.now },

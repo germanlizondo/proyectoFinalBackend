@@ -3,6 +3,8 @@ const router = Router();
 const mongoose = require('mongoose');
 
 const path = require('path');
+const generateRSAKeypair = require('generate-rsa-keypair');
+const fs = require('fs');
 
 const User = require('../models/User');
 const Chat = require('../models/Chat');
@@ -10,6 +12,7 @@ const Following = require('../models/Following');
 const Followed = require('../models/Followed');
 
 
+const images_dir = path.join(__dirname + '/../public/images');
 
 //routes
 router.get('/', (req, res) => {
@@ -28,7 +31,7 @@ router.get('/all-users', async(req, res) => {
 
 router.get('/get-user/:id', async(req, res) => {
 
-    User.findOne({ _id: req.params.id }, { password: 0 })
+    User.findOne({ _id: req.params.id }, { password: 0,publicKey: 0,privateKey:0 })
         .then((user) => res.send({ user: user }))
         .catch((err) => res.send(err));
 
@@ -44,10 +47,10 @@ router.get('/all-users/:nickname', async(req, res) => {
 });
 
 router.post('/login', async(req, res) => {
-    console.log(req.body);
+    console.log(req.body.password)
     User.findOne({ nickname: req.body.nickname, password: req.body.password })
         .then((user) => {
-            console.log(user)
+            
             if (!user) res.send({ err: 'Email o contraseña invalidos' });
             else res.send(user);
         })
@@ -57,13 +60,16 @@ router.post('/login', async(req, res) => {
 });
 
 router.post('/new-user', async(req, res) => {
+
     const user = new User();
     const followed = new Followed();
     const following = new Following();
 
+
     user.nickname = req.body.nickname;
     user.email = req.body.email;
     user.password = req.body.password;
+  
     console.log(user);
     user.save().then(() => {
             followed.user = user._id;
@@ -124,16 +130,21 @@ router.get('/get-chat/:id', (req, res) => {
     var id = mongoose.Types.ObjectId(req.params.id);
     Chat.find({ usuarios: id }, { mensajes: 0 })
         .populate('usuarios')
-        .then((chats) => res.send({chats}))
+        .then((chats) => {
+            res.send({chats}
+                )})
         .catch((err) => res.send(err))
 });
+
 
 router.post('/new-chat', async(req, res) => {
 
     const chat = new Chat();
     const transmitor = await User.findById({ _id: req.body.transmitor });
     const receptor = await User.findById({ _id: req.body.receptor });
-
+    var pair = generateRSAKeypair()
+    chat.publicKey  = pair.public;
+    chat.privateKey = pair.private;
     chat.usuarios = [transmitor, receptor];
     chat.save()
         .then(res.send(chat))
@@ -169,9 +180,35 @@ router.post('/new-message', (req, res) => {
 
 //images
 router.post('/uploadprofileimage', (req, res) => {
-    console.log(req.file);
-    console.log("ha recivido algo");
-    res.send("updolades");
+    console.log("Aaaaaaaaaaa");
+   
 });
+
+router.get('/getimages',(req,res)=>{
+
+    var allfiles = [];
+    fs.readdir(images_dir,(err,files)=>{
+        files.forEach(function (file) {
+            // Do whatever you want to do with the file
+           allfiles.push({'file':file});
+    });
+    res.send(JSON.stringify(allfiles));
+    })
+   
+})
+
+router.post('/cambia-img',(req,res)=>{
+    console.log(req.body)
+    User.updateOne({ _id: req.body.user }, {
+        $set: { img: req.body.img }
+    }).then(data=>res.send(data))
+})
+
+router.get('/get-key/:id',(req,res)=>{
+
+    Chat.findOne({ _id: req.params.id },{publicKey:1,privateKey:1})
+    .then((chat) => res.send({ chat }))
+    .catch((err) => res.send(err));
+})
 
 module.exports = router;
